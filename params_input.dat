@@ -1,0 +1,10 @@
+
+# Maximum uncertainties in V, BV, and VI
+#
+#    eVmax   eBVmax   eVImax
+EM      .2       .2       .2
+
+# Column names
+#
+#   V eV BV eBV VI eVI Gmag e_Gmag BP-RP
+CM  V eV BV eBV VI eVI Gmag e_Gmag BP-RP
