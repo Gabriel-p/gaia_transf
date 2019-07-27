@@ -7,4 +7,4 @@ EM      .2       .2       .2
 # Column names
 #
 #   V eV BV eBV VI eVI Gmag e_Gmag BP-RP
-CM  V eV BV eBV VI eVI Gmag e_Gmag BP-RP
+CM  V Verr BV BVerr VI VIerr Gmag e_Gmag BP-RP

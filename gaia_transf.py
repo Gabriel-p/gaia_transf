@@ -54,17 +54,24 @@ def main():
             t[V_id], t[eV_id], t[BV_id], t[eBV_id], t[VI_id], t[eVI_id],\
             t[G_id], t[eG_id], t[BPRP_id]
 
+        # Carrasco filters
+        logging.info("\nApply filters on photometry")
+        Vm, BVm, VIm, Gm, BPRPm = carrascoFilter(
+            Gm_all, eGm, Vm_all, eVm, BVm_all, eBVm, VIm_all, eVIm, BPRPm_all,
+            eVmax, eBVmax, eVImax)
+
         logging.info("\nApply transformations")
-        Vm, BVm, VIm, Gm, BPRPm, x1, y1, x2, y2, x3, y3, delta1, delta2,\
-            delta3 = transfPlot(
-                Gm_all, eGm, Vm_all, eVm, BVm_all, eBVm, VIm_all, eVIm,
-                BPRPm_all, eVmax, eBVmax, eVImax)
+        G_BV_trnsf, GG_BV_mean, GG_BV_median, G_VI_trnsf, GG_VI_mean,\
+            GG_VI_median, G_BR_trnsf, GG_BR_mean, GG_BR_median, x1, y1, x2,\
+            y2, x3, y3, delta1, delta2, delta3 = transfPlot(
+                Gm, Vm, BVm, VIm, BPRPm)
 
         logging.info("\nPlot")
         makePlots(
-            cl_name, Vm_all, BVm_all, VIm_all, Gm_all, BPRPm_all, Vm, eVm, BVm,
-            eBVm, VIm, eVIm, Gm, eGm, BPRPm, x1, y1, x2, y2, x3, y3, delta1,
-            delta2, delta3)
+            cl_name, Vm_all, BVm_all, VIm_all, Gm_all, BPRPm_all, Vm, BVm,
+            VIm, Gm, BPRPm, G_BV_trnsf, GG_BV_mean, GG_BV_median,
+            G_VI_trnsf, GG_VI_mean, GG_VI_median, G_BR_trnsf, GG_BR_mean,
+            GG_BR_median, x1, y1, x2, y2, x3, y3, delta1, delta2, delta3)
 
     logging.info("\nEnd")
 
@@ -102,26 +109,11 @@ def get_files():
     return cl_files
 
 
-def PolyCoefficients(x, coeffs):
-    """
-    Returns a polynomial for ``x`` values for the ``coeffs`` provided.
-    The coefficients must be in ascending order (``x**0`` to ``x**p``).
-    """
-    y = 0
-    for p in range(len(coeffs)):
-        y += coeffs[p] * x**p
-    return y
-
-
-def transfPlot(
+def carrascoFilter(
     Gm, eGm, Vm, eVm, BVm, eBVm, VIm, eVIm, BPRPm, eVmax, eBVmax,
         eVImax):
     """
-    Carrasco Gaia DR2 transformations:
-    https://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/
-    chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html
     """
-
     # Apply masks
     Gmsk = Gm < 13.
     eGmsk = eGm < 0.01
@@ -137,7 +129,30 @@ def transfPlot(
     Vm, BVm, VIm, Gm, BPRPm = Vm[msk], BVm[msk], VIm[msk],\
         Gm[msk], BPRPm[msk]
 
-    Ninterp = 1000
+    return Vm, BVm, VIm, Gm, BPRPm
+
+
+def PolyCoefficients(x, coeffs):
+    """
+    Returns a polynomial for ``x`` values for the ``coeffs`` provided.
+    The coefficients must be in ascending order (``x**0`` to ``x**p``).
+    """
+    y = 0
+    for p in range(len(coeffs)):
+        y += coeffs[p] * x**p
+    return y
+
+
+def transfPlot(Gm, Vm, BVm, VIm, BPRPm, Ninterp=1000):
+    """
+    Carrasco Gaia DR2 transformations:
+    https://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/
+    chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html
+    """
+
+    def colorTransf(coeffs, col):
+        return coeffs[0] + coeffs[1] * col + coeffs[2] * col**2 + coeffs[3] *\
+            col**3
 
     # G-V vs B-V
     x1 = np.linspace(min(BVm), max(BVm), Ninterp)
@@ -148,6 +163,15 @@ def transfPlot(
         np.array([BVm, Gm - Vm]).T, np.array([x1, y1]).T), axis=1))
     logging.info("GV vs BV Delta_median: {:.4f}".format(delta1))
 
+    # G_Gaia vs G_Transf
+    G_BV_trnsf = Vm + colorTransf(coeffs, BVm)
+    GG_BV_mean, GG_BV_median = np.mean(Gm - G_BV_trnsf),\
+        np.median(Gm - G_BV_trnsf)
+    logging.info("BV, G_Gaia-G_Transf Delta_mean: {:.4f}".format(
+        GG_BV_mean))
+    logging.info("BV, G_Gaia-G_Transf Delta_median: {:.4f}".format(
+        GG_BV_median))
+
     # G-V vs V-I
     x2 = np.linspace(np.nanmin(VIm), np.nanmax(VIm), Ninterp)
     coeffs = [-0.01746, 0.008092, -0.2810, 0.03655]
@@ -156,22 +180,42 @@ def transfPlot(
         np.array([VIm, Gm - Vm]).T, np.array([x2, y2]).T), axis=1))
     logging.info("GV vs VI Delta_median: {:.4f}".format(delta2))
 
+    # G_Gaia vs G_Transf
+    G_VI_trnsf = Vm + colorTransf(coeffs, VIm)
+    GG_VI_mean, GG_VI_median = np.mean(Gm - G_VI_trnsf),\
+        np.median(Gm - G_VI_trnsf)
+    logging.info("VI, G_Gaia-G_Transf Delta_mean: {:.4f}".format(
+        GG_VI_mean))
+    logging.info("VI, G_Gaia-G_Transf Delta_median: {:.4f}".format(
+        GG_VI_median))
+
     # G-V vs G_BP-G_RP
     x3 = np.linspace(min(BPRPm), max(BPRPm), Ninterp)
-    coeffs = [-0.01760, -0.006860, -0.1732]
+    coeffs = [-0.01760, -0.006860, -0.1732, 0.]
     y3 = PolyCoefficients(x3, coeffs)
     delta3 = np.median(np.min(cdist(
         np.array([BPRPm, Gm - Vm]).T, np.array([x3, y3]).T), axis=1))
     logging.info("GV vs BPRP Delta_median: {:.4f}".format(delta3))
 
-    return Vm, BVm, VIm, Gm, BPRPm, x1, y1, x2, y2, x3, y3, delta1, delta2,\
-        delta3
+    # G_Gaia vs G_Transf
+    G_BR_trnsf = Vm + colorTransf(coeffs, BPRPm)
+    GG_BR_mean, GG_BR_median = np.mean(Gm - G_BR_trnsf),\
+        np.median(Gm - G_BR_trnsf)
+    logging.info("BR, G_Gaia-G_Transf Delta_mean: {:.4f}".format(
+        GG_BR_mean))
+    logging.info("BR, G_Gaia-G_Transf Delta_median: {:.4f}".format(
+        GG_BR_median))
+
+    return G_BV_trnsf, GG_BV_mean, GG_BV_median, G_VI_trnsf, GG_VI_mean,\
+        GG_VI_median, G_BR_trnsf, GG_BR_mean, GG_BR_median, x1, y1, x2, y2,\
+        x3, y3, delta1, delta2, delta3
 
 
 def makePlots(
-    name, Vm_all, BVm_all, VIm_all, Gm_all, BPRPm_all, Vm, eVm, BVm, eBVm,
-    VIm, eVIm, Gm, eGm, BPRPm, x1, y1, x2, y2, x3, y3, delta1, delta2,
-        delta3):
+    name, Vm_all, BVm_all, VIm_all, Gm_all, BPRPm_all, Vm, BVm, VIm, Gm,
+    BPRPm, G_BV_trnsf, GG_BV_mean, GG_BV_median, G_VI_trnsf, GG_VI_mean,
+    GG_VI_median, G_BR_trnsf, GG_BR_mean, GG_BR_median, x1, y1, x2, y2, x3,
+        y3, delta1, delta2, delta3):
     """
     """
     dpi = 150
@@ -180,7 +224,7 @@ def makePlots(
 
     ymin, ymax = min(Gm) - .5, max(Gm) + .5
 
-    ax = plt.subplot(gs[3])
+    ax = plt.subplot(gs[0])
     ax.grid(which='major', axis='both', linestyle='--', color='grey', lw=.5)
     plt.xlabel(r"$B-V$", fontsize=14)
     plt.ylabel(r"$G$", fontsize=14)
@@ -193,7 +237,7 @@ def makePlots(
     plt.gca().invert_yaxis()
     plt.legend(fontsize=12)
 
-    ax = plt.subplot(gs[4])
+    ax = plt.subplot(gs[1])
     ax.grid(which='major', axis='both', linestyle='--', color='grey', lw=.5)
     plt.xlabel(r"$V-I$", fontsize=14)
     plt.ylabel(r"$G$", fontsize=14)
@@ -203,7 +247,7 @@ def makePlots(
     plt.ylim(ymin, ymax)
     plt.gca().invert_yaxis()
 
-    ax = plt.subplot(gs[5])
+    ax = plt.subplot(gs[2])
     ax.grid(which='major', axis='both', linestyle='--', color='grey', lw=.5)
     plt.xlabel(r"$BP-RP$", fontsize=14)
     plt.ylabel(r"$G$", fontsize=14)
@@ -213,6 +257,53 @@ def makePlots(
     plt.ylim(ymin, ymax)
     plt.gca().invert_yaxis()
 
+    ###
+    ax = plt.subplot(gs[3])
+    plt.title("(B-V)", fontsize=14)
+    ax.grid(which='major', axis='both', linestyle='--', color='grey', lw=.5)
+    plt.scatter(Gm, Gm - G_BV_trnsf)
+    ax.axhline(y=0, c='k', ls='--')
+    ax.axhline(
+        y=GG_BV_mean, c='g', ls=':',
+        label=r"$\Delta_{{mean}}\approx{:.3f}$".format(GG_BV_mean))
+    ax.axhline(
+        y=GG_BV_median, c='r', ls=':',
+        label=r"$\Delta_{{median}}\approx{:.3f}$".format(GG_BV_median))
+    plt.xlabel(r"$G_{Gaia}$", fontsize=14)
+    plt.ylabel(r"$G_{Gaia}-G_{Transf}$", fontsize=14)
+    plt.legend(fontsize=12)
+
+    ax = plt.subplot(gs[4])
+    plt.title("(V-I)", fontsize=14)
+    ax.grid(which='major', axis='both', linestyle='--', color='grey', lw=.5)
+    plt.scatter(Gm, Gm - G_VI_trnsf)
+    ax.axhline(y=0, c='k', ls='--')
+    ax.axhline(
+        y=GG_VI_mean, c='g', ls=':',
+        label=r"$\Delta_{{mean}}\approx{:.3f}$".format(GG_VI_mean))
+    ax.axhline(
+        y=GG_VI_median, c='r', ls=':',
+        label=r"$\Delta_{{median}}\approx{:.3f}$".format(GG_VI_median))
+    plt.xlabel(r"$G_{Gaia}$", fontsize=14)
+    plt.ylabel(r"$G_{Gaia}-G_{Transf}$", fontsize=14)
+    plt.legend(fontsize=12)
+
+    ax = plt.subplot(gs[5])
+    plt.title("(BP-RP)", fontsize=14)
+    ax.grid(which='major', axis='both', linestyle='--', color='grey', lw=.5)
+    plt.scatter(Gm, Gm - G_BR_trnsf)
+    ax.axhline(y=0, c='k', ls='--')
+    ax.axhline(
+        y=GG_BR_mean, c='g', ls=':',
+        label=r"$\Delta_{{mean}}\approx{:.3f}$".format(GG_BR_mean))
+    ax.axhline(
+        y=GG_BR_median, c='r', ls=':',
+        label=r"$\Delta_{{median}}\approx{:.3f}$".format(GG_BR_median))
+    plt.xlabel(r"$G_{Gaia}$", fontsize=14)
+    plt.ylabel(r"$G_{Gaia}-G_{Transf}$", fontsize=14)
+    plt.legend(fontsize=12)
+
+    ####
     ax = plt.subplot(gs[6])
     ax.grid(which='major', axis='both', linestyle='--', color='grey', lw=.5)
     plt.title(
