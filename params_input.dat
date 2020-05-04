@@ -1,10 +1,12 @@
 
 # Maximum uncertainties in V, BV, and VI
 #
-#    eVmax   eBVmax   eVImax
-EM      .2       .2       .2
+#    eVmax   eBVmax       eBVmax   eVImax
+EM      .2       .2           .2       .2
 
-# Column names
+# Column names for J-C photometry.
+# Gaia photometry is assumedto have columns names:
+# Gmag   e_Gmag   BP-RP   e_BPmag  e_RPmag   E_BR_RP_
 #
-#   V eV BV eBV VI eVI Gmag e_Gmag BP-RP
-CM  V Verr BV BVerr VI VIerr Gmag e_Gmag BP-RP
+#   V   eV   UB   eUB   BV   eBV   VI   eVI   
+CM  V   eV   UB   eUB   BV   eBV   VI   eVI
