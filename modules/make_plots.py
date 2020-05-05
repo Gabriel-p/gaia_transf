@@ -7,12 +7,11 @@ import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-def main(name, data, transf, minmax=1.):
+def main(name, data, transf, max_delta):
     """
     """
-    Gm, BPRPm, Um, Bm, Vm, Im, UB, BV, VI = data['Gm'], data['BPRPm'],\
-        data['Um'], data['Bm'], data['Vm'], data['Im'], data['UBm'],\
-        data['BVm'], data['VIm']
+    Gm, BPRPm, Um, Bm, Vm, Im, UB, BV, VI = [np.array(data[_]) for _ in (
+        'Gm', 'BPRPm', 'Um', 'Bm', 'Vm', 'Im', 'UBm', 'BVm', 'VIm')]
 
     plt.style.use('seaborn')
     plt.set_cmap('viridis')
@@ -23,9 +22,11 @@ def main(name, data, transf, minmax=1.):
         plt.subplot(gs[gs_ax])
         plt.xlabel(r"$BP-RP$", fontsize=12)
         plt.ylabel(r"$G-{}$".format(mag_name), fontsize=12)
-        plt.plot(transf['x'], transf[mag_name + '_poly'], c='k', zorder=5)
+        y_poly = transf[mag_name + '_poly']
+        plt.plot(transf['x'], y_poly, c='k', zorder=5)
         plt.scatter(BPRPm, Gm - mag, label="N={}".format(len(Gm)), c=Vm)
         plt.xlim(max(-.4, min(BPRPm) - .05), min(2.8, max(BPRPm) + .05))
+        plt.ylim(min(y_poly) - .1, max(y_poly) + .1)
 
     # G-X vs BP-RP
     polyPlot(0, Um, 'U')
@@ -33,16 +34,16 @@ def main(name, data, transf, minmax=1.):
     polyPlot(2, Vm, 'V')
     polyPlot(3, Im, 'I')
 
-    def magDiffs(gs_ax, mag, mag_name, minmax=minmax, BPRPm=BPRPm):
+    def magDiffs(gs_ax, mag, mag_name, BPRPm=BPRPm):
         plt.subplot(gs[gs_ax])
         plt.xlabel(r"${}$".format(mag_name), fontsize=12)  # _{{Gaia}}
         plt.ylabel(
             r"${}_{{Gaia}} - {}$".format(mag_name, mag_name), fontsize=12)
         delta_M = transf[mag_name + '_Gaia'] - mag
 
-        msk = (-minmax < delta_M) & (delta_M < minmax)
+        msk = (-max_delta < delta_M) & (delta_M < max_delta)
         plt.title(
-            "N={}, mask=({}, {})".format(msk.sum(), -minmax, minmax),
+            "N={}, mask=({}, {})".format(msk.sum(), -max_delta, max_delta),
             fontsize=12)
 
         delta_M, BPRPm, mag = delta_M[msk], BPRPm[msk], mag[msk]
@@ -68,14 +69,14 @@ def main(name, data, transf, minmax=1.):
     magDiffs(6, Vm, 'V')
     magDiffs(7, Im, 'I')
 
-    def colDiffs(gs_ax, col_data, col, minmax=minmax, Vm=Vm, BPRPm=BPRPm):
+    def colDiffs(gs_ax, col_data, col, Vm=Vm, BPRPm=BPRPm):
         ax = plt.subplot(gs[gs_ax])
         col_gaia = transf[col[0] + '_Gaia'] - transf[col[1] + '_Gaia']
         delta_col = col_gaia - col_data
 
-        msk = (-minmax < delta_col) & (delta_col < minmax)
+        msk = (-max_delta < delta_col) & (delta_col < max_delta)
         plt.title(
-            "N={}, mask=({}, {})".format(msk.sum(), -minmax, minmax),
+            "N={}, mask=({}, {})".format(msk.sum(), -max_delta, max_delta),
             fontsize=12)
         plt.xlabel(r"$V}$", fontsize=12)
         plt.ylabel(r"${}_{{Gaia}} - {}$".format(col, col), fontsize=12)

@@ -12,7 +12,7 @@ def main(data, Ninterp=1000):
     https://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/
     chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html
     """
-    Gm, BPRPm = data['Gm'], data['BPRPm']
+    Gm, BPRPm = np.array(data['Gm']), np.array(data['BPRPm'])
 
     # UB_coeffs(data['Bm'], Gm, BPRPm)
 

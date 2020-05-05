@@ -10,3 +10,13 @@ EM      .2       .2           .2       .2
 #
 #   V   eV   UB   eUB   BV   eBV   VI   eVI   
 CM  V   eV   UB   eUB   BV   eBV   VI   eVI
+
+# Maximum delta for plotting
+#
+#    max_delta
+MP          .6
+
+# Combine all data into a single plot?
+#
+#    plot_all
+PA       False

@@ -4,19 +4,31 @@ from os.path import exists
 from os import makedirs, listdir
 from pathlib import Path
 import logging
-
+from datetime import datetime
+from astropy.table import Table
 from modules import transf
 from modules import make_plots
-
-from astropy.table import Table
-# from scipy.spatial.distance import cdist
 
 
 def main(CarrascoStandards=False):
     """
-    If the CarrascoStandards flag is set to True, it will use the list of
-    Landolt standards provided by Varrasco.
+    Compare UBVI photometry with Carrasco's transformations.
+
+    CarrascoStandards: bool (hidden parameter)
+    If True, it will use the list of Landolt standards provided by Carrasco.
     """
+
+    # Set up logging module
+    rpath = Path().absolute()
+    level = logging.INFO
+    frmt = ' %(message)s'
+    handlers = [
+        logging.FileHandler(join(rpath, 'out/gaia_transf.log'), mode='w'),
+        logging.StreamHandler()]
+    logging.basicConfig(level=level, format=frmt, handlers=handlers)
+
+    logging.info(datetime.now())
+
     if CarrascoStandards:
         data_dict = loadCarrasco()
         transf_dict = transf.main(data_dict)
@@ -25,7 +37,7 @@ def main(CarrascoStandards=False):
 
     # Input parameters
     eVmax, eUBmax, eBVmax, eVImax, V_id, eV_id, UB_id, eUB_id, BV_id, eBV_id,\
-        VI_id, eVI_id = params_input()
+        VI_id, eVI_id, max_delta, plotAll = params_input()
 
     # Generate output dir if it doesn't exist.
     if not exists('out'):
@@ -34,27 +46,21 @@ def main(CarrascoStandards=False):
     # Process all files inside 'in/' folder.
     clusters = get_files()
     if not clusters:
-        print("No input cluster files found")
+        logging.info("No input cluster files found")
 
-    rpath = Path().absolute()
+    data_dict_all = {
+        'Gm': [], 'BPRPm': [], 'Um': [], 'Bm': [], 'Vm': [], 'Im': [],
+        'UBm': [], 'BVm': [], 'VIm': []}
     for cluster in clusters:
         # Extract name of file without extension
         cl_name = cluster[3:-4]
-
-        # Set up logging module
-        level = logging.INFO
-        frmt = ' %(message)s'
-        handlers = [
-            logging.FileHandler(
-                join(rpath, 'out', cl_name + '.log'), mode='w'),
-            logging.StreamHandler()]
-        logging.basicConfig(level=level, format=frmt, handlers=handlers)
 
         logging.info("\nProcessing: {}...".format(cl_name))
 
         # Read cluster photometry.
         logging.info("Read matched final photometry")
-        t = Table.read(join(rpath, cluster), format='ascii')
+        t = Table.read(join(rpath, cluster), format='ascii',
+                       fill_values=[('', '0'), ('NA', '0'), ('INDEF', '0')])
         Vm, eVm, UBm_all, eUBm, BVm_all, eBVm, VIm_all, eVIm, Gm, eGm,\
             BPRPm, e_BP, e_RP, eEBPRP = t[V_id], t[eV_id], t[UB_id],\
             t[eUB_id], t[BV_id], t[eBV_id], t[VI_id], t[eVI_id], t['Gmag'],\
@@ -66,13 +72,23 @@ def main(CarrascoStandards=False):
             Vm, eVm, UBm_all, eUBm, BVm_all, eBVm, VIm_all, eVIm,
             Gm, eGm, BPRPm, e_BP, e_RP, eEBPRP, eVmax, eUBmax, eBVmax, eVImax)
 
-        logging.info("Apply transformations")
-        transf_dict = transf.main(data_dict)
+        if plotAll:
+            # Store for plotting of all the combined data
+            for k, v in data_dict.items():
+                data_dict_all[k] += list(v)
+            continue
+        else:
+            logging.info("Apply transformations")
+            transf_dict = transf.main(data_dict)
 
-        logging.info("Plot")
-        make_plots.main(cl_name, data_dict, transf_dict)
+            logging.info("Plot")
+            make_plots.main(cl_name, data_dict, transf_dict, max_delta)
 
-    logging.info("\nEnd")
+    if plotAll:
+        transf_dict = transf.main(data_dict_all)
+        make_plots.main('all', data_dict_all, transf_dict, max_delta)
+
+    print("\nFinished")
 
 
 def params_input():
@@ -90,9 +106,13 @@ def params_input():
                 if reader[0] == 'CM':
                     V_id, eV_id, UB_id, eUB_id, BV_id, eBV_id, VI_id, eVI_id =\
                         reader[1:]
+                if reader[0] == 'MP':
+                    max_delta = float(reader[1])
+                if reader[0] == 'PA':
+                    plotAll = True if reader[1] == 'True' else False
 
     return eVmax, eUBmax, eBVmax, eVImax, V_id, eV_id, UB_id, eUB_id, BV_id,\
-        eBV_id, VI_id, eVI_id
+        eBV_id, VI_id, eVI_id, max_delta, plotAll
 
 
 def loadCarrasco():
