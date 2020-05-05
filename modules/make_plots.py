@@ -24,7 +24,7 @@ def main(name, data, transf, max_delta):
         plt.ylabel(r"$G-{}$".format(mag_name), fontsize=12)
         y_poly = transf[mag_name + '_poly']
         plt.plot(transf['x'], y_poly, c='k', zorder=5)
-        plt.scatter(BPRPm, Gm - mag, label="N={}".format(len(Gm)), c=Vm)
+        plt.scatter(BPRPm, Gm - mag, label="N={}".format(len(Gm)), c=mag)
         plt.xlim(max(-.4, min(BPRPm) - .05), min(2.8, max(BPRPm) + .05))
         plt.ylim(min(y_poly) - .1, max(y_poly) + .1)
 
@@ -46,7 +46,7 @@ def main(name, data, transf, max_delta):
             "N={}, mask=({}, {})".format(msk.sum(), -max_delta, max_delta),
             fontsize=12)
 
-        delta_M, BPRPm, mag = delta_M[msk], BPRPm[msk], mag[msk]
+        delta_M = delta_M[msk]
         mag_mean, mag_std = np.mean(delta_M), np.std(delta_M)
         plt.axhline(
             np.mean(delta_M), c='red', ls='--', lw=1.5, zorder=1,
@@ -56,7 +56,7 @@ def main(name, data, transf, max_delta):
         plt.axhline(
             y=mag_median, ls=':', c='k',
             label="Median = {:.3f}".format(mag_median))
-        plt.scatter(mag, delta_M, c=BPRPm)
+        plt.scatter(mag[msk], delta_M, c=BPRPm[msk])
         plt.legend(fontsize=12)
 
         logging.info("Delta {} mean: {:.4f} +/- {:.4f}".format(
@@ -69,7 +69,7 @@ def main(name, data, transf, max_delta):
     magDiffs(6, Vm, 'V')
     magDiffs(7, Im, 'I')
 
-    def colDiffs(gs_ax, col_data, col, Vm=Vm, BPRPm=BPRPm):
+    def colDiffs(gs_ax, col_data, col, mag=Gm, BPRPm=BPRPm):
         ax = plt.subplot(gs[gs_ax])
         col_gaia = transf[col[0] + '_Gaia'] - transf[col[1] + '_Gaia']
         delta_col = col_gaia - col_data
@@ -78,7 +78,7 @@ def main(name, data, transf, max_delta):
         plt.title(
             "N={}, mask=({}, {})".format(msk.sum(), -max_delta, max_delta),
             fontsize=12)
-        plt.xlabel(r"$V}$", fontsize=12)
+        plt.xlabel(r"$G$", fontsize=12)
         plt.ylabel(r"${}_{{Gaia}} - {}$".format(col, col), fontsize=12)
         col_mean, col_std = np.mean(delta_col[msk]), np.std(delta_col[msk])
         plt.axhline(
@@ -89,14 +89,14 @@ def main(name, data, transf, max_delta):
         plt.axhline(
             y=np.nanmedian(delta_col[msk]), ls=':', c='k',
             label="Median = {:.3f}".format(col_median))
-        im = plt.scatter(Vm[msk], delta_col[msk], c=BPRPm[msk])
+        im = plt.scatter(mag[msk], delta_col[msk], c=BPRPm[msk])
         plt.legend(fontsize=12)
 
         logging.info("Delta {} mean: {:.4f} +/- {:.4f}".format(
             col, col_mean, col_std))
         logging.info("Delta {} median: {:.3f}".format(col, col_median))
 
-        if col == 'BV':
+        if col == 'VI':
             divider = make_axes_locatable(ax)
             cax = divider.append_axes('right', size='2%', pad=0.05)
             cbar = plt.colorbar(im, cax=cax)
