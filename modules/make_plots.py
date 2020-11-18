@@ -7,11 +7,20 @@ import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-def main(name, data, transf, max_delta):
+def main(name, data, transf, mag_delta_max):
     """
     """
     Gm, BPRPm, Um, Bm, Vm, Im, UB, BV, VI = [np.array(data[_]) for _ in (
         'Gm', 'BPRPm', 'Um', 'Bm', 'Vm', 'Im', 'UBm', 'BVm', 'VIm')]
+    msk = []
+    for cc in ('Gm', 'BPRPm', 'Um', 'Bm', 'Vm', 'Im', 'UBm', 'BVm', 'VIm'):
+        try:
+            msk.append(~data[cc].mask)
+        except AttributeError:
+            pass
+    msk0 = np.logical_and.reduce(msk)
+    Gm, BPRPm, Um, Bm, Vm, Im, UB, BV, VI = Gm[msk0], BPRPm[msk0], Um[msk0],\
+        Bm[msk0], Vm[msk0], Im[msk0], UB[msk0], BV[msk0], VI[msk0]
 
     plt.style.use('seaborn')
     plt.set_cmap('viridis')
@@ -39,12 +48,11 @@ def main(name, data, transf, max_delta):
         plt.xlabel(r"${}$".format(mag_name), fontsize=12)  # _{{Gaia}}
         plt.ylabel(
             r"${}_{{Gaia}} - {}$".format(mag_name, mag_name), fontsize=12)
-        delta_M = transf[mag_name + '_Gaia'] - mag
+        delta_M = transf[mag_name + '_Gaia'][msk0] - mag
 
-        msk = (-max_delta < delta_M) & (delta_M < max_delta)
+        msk = (-mag_delta_max < delta_M) & (delta_M < mag_delta_max)
         plt.title(
-            "N={}, mask=({}, {})".format(msk.sum(), -max_delta, max_delta),
-            fontsize=12)
+            "N={}, Nmask={}".format(len(delta_M), msk.sum()), fontsize=12)
 
         delta_M = delta_M[msk]
         mag_mean, mag_std = np.mean(delta_M), np.std(delta_M)
@@ -72,12 +80,12 @@ def main(name, data, transf, max_delta):
     def colDiffs(gs_ax, col_data, col, mag=Gm, BPRPm=BPRPm):
         ax = plt.subplot(gs[gs_ax])
         col_gaia = transf[col[0] + '_Gaia'] - transf[col[1] + '_Gaia']
-        delta_col = col_gaia - col_data
+        delta_col = col_gaia[msk0] - col_data
 
-        msk = (-max_delta < delta_col) & (delta_col < max_delta)
+        msk = (-mag_delta_max < delta_col) & (delta_col < mag_delta_max)
+
         plt.title(
-            "N={}, mask=({}, {})".format(msk.sum(), -max_delta, max_delta),
-            fontsize=12)
+            "N={}, Nmask={}".format(len(delta_col), msk.sum()), fontsize=12)
         plt.xlabel(r"$G$", fontsize=12)
         plt.ylabel(r"${}_{{Gaia}} - {}$".format(col, col), fontsize=12)
         col_mean, col_std = np.mean(delta_col[msk]), np.std(delta_col[msk])

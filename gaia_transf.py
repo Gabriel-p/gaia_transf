@@ -36,8 +36,8 @@ def main(CarrascoStandards=False):
         return
 
     # Input parameters
-    eVmax, eUBmax, eBVmax, eVImax, V_id, eV_id, UB_id, eUB_id, BV_id, eBV_id,\
-        VI_id, eVI_id, max_delta, plotAll = params_input()
+    mag_delta_max, eVmax, eUBmax, eBVmax, eVImax, V_id, eV_id, UB_id, eUB_id,\
+        BV_id, eBV_id, VI_id, eVI_id, plotAll = params_input()
 
     # Generate output dir if it doesn't exist.
     if not exists('out'):
@@ -69,8 +69,8 @@ def main(CarrascoStandards=False):
         # Carrasco filters
         logging.info("Apply filters on photometry")
         data_dict = carrascoFilter(
-            Vm, eVm, UBm_all, eUBm, BVm_all, eBVm, VIm_all, eVIm,
-            Gm, eGm, BPRPm, e_BP, e_RP, eEBPRP, eVmax, eUBmax, eBVmax, eVImax)
+            Vm, eVm, UBm_all, eUBm, BVm_all, eBVm, VIm_all, eVIm, Gm, eGm,
+            BPRPm, e_BP, e_RP, eEBPRP, eVmax, eUBmax, eBVmax, eVImax)
 
         if plotAll:
             # Store for plotting of all the combined data
@@ -82,11 +82,11 @@ def main(CarrascoStandards=False):
             transf_dict = transf.main(data_dict)
 
             logging.info("Plot")
-            make_plots.main(cl_name, data_dict, transf_dict, max_delta)
+            make_plots.main(cl_name, data_dict, transf_dict, mag_delta_max)
 
     if plotAll:
         transf_dict = transf.main(data_dict_all)
-        make_plots.main('all', data_dict_all, transf_dict, max_delta)
+        make_plots.main('all', data_dict_all, transf_dict, mag_delta_max)
 
     print("\nFinished")
 
@@ -97,22 +97,22 @@ def params_input():
     """
     with open('params_input.dat', "r") as f_dat:
         # Iterate through each line in the file.
-        for l, line in enumerate(f_dat):
+        for line in f_dat:
             if not line.startswith("#") and line.strip() != '':
                 reader = line.split()
+                if reader[0] == 'VM':
+                    mag_delta_max = float(reader[1])
                 if reader[0] == 'EM':
                     eVmax, eUBmax, eBVmax, eVImax = list(map(
                         float, reader[1:]))
                 if reader[0] == 'CM':
                     V_id, eV_id, UB_id, eUB_id, BV_id, eBV_id, VI_id, eVI_id =\
                         reader[1:]
-                if reader[0] == 'MP':
-                    max_delta = float(reader[1])
                 if reader[0] == 'PA':
                     plotAll = True if reader[1] == 'True' else False
 
-    return eVmax, eUBmax, eBVmax, eVImax, V_id, eV_id, UB_id, eUB_id, BV_id,\
-        eBV_id, VI_id, eVI_id, max_delta, plotAll
+    return mag_delta_max, eVmax, eUBmax, eBVmax, eVImax, V_id, eV_id, UB_id,\
+        eUB_id, BV_id, eBV_id, VI_id, eVI_id, plotAll
 
 
 def loadCarrasco():

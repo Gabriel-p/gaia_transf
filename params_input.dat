@@ -1,20 +1,21 @@
 
-# Maximum uncertainties in V, BV, and VI
+# Maximum V magnitude delta to discard outliers.
 #
-#    eVmax   eBVmax       eBVmax   eVImax
-EM      .2       .2           .2       .2
+#    mag_delta_max
+VM              1.
 
-# Column names for J-C photometry.
-# Gaia photometry is assumedto have columns names:
+# Maximum uncertainties in V, UB, BV, and VI
+#
+#    eVmax   eUBmax    eBVmax   eVImax
+EM      .1       .1        .1       .1
+
+# Column names for input photometry.
+#
+# Gaia photometry is assumed to have columns names:
 # Gmag   e_Gmag   BP-RP   e_BPmag  e_RPmag   E_BR_RP_
 #
 #   V   eV   UB   eUB   BV   eBV   VI   eVI   
 CM  V   eV   UB   eUB   BV   eBV   VI   eVI
-
-# Maximum delta for plotting
-#
-#    max_delta
-MP          .6
 
 # Combine all data into a single plot?
 #
